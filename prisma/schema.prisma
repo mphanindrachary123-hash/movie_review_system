@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model users {
+  id         Int           @id @default(autoincrement())
+  username   String        @unique(map: "username") @db.VarChar(100)
+  email      String        @unique(map: "email") @db.VarChar(255)
+  role       users_role?   @default(user)
+  status     users_status? @default(active)
+  created_at DateTime?     @default(now()) @db.Timestamp(0)
+  updated_at DateTime?     @default(now()) @db.Timestamp(0)
+  password   String?
+  movies     movies[]
+  reviews    reviews[]
+  userlogins userlogins[]
+  watchlist  watchlist[]
+}
+
+model userlogins {
+  id              Int                @id @default(autoincrement())
+  user_id         Int
+  token           String             @unique(map: "token") @db.VarChar(255)
+  status          userlogins_status? @default(active)
+  created_at      DateTime?          @default(now()) @db.Timestamp(0)
+  expiration_date DateTime?          @db.Timestamp(0)
+  users           users              @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "userlogins_ibfk_1")
+
+  @@index([user_id], map: "user_id")
+}
+
+model movies {
+  id                 Int                  @id @default(autoincrement())
+  title              String?              @unique(map: "title") @db.VarChar(255)
+  description        String?              @db.Text
+  genre              String?              @db.VarChar(100)
+  language           String?              @db.VarChar(50)
+  director           String?              @db.VarChar(100)
+  cast               String?              @db.Text
+  release_year       Int?
+  poster_url         String?              @db.Text
+  rating             Float?               @default(0) @db.Float
+  approved           Boolean?             @default(false)
+  created_by         Int?
+  created_at         DateTime?            @default(now()) @db.Timestamp(0)
+  updated_at         DateTime?            @default(now()) @db.Timestamp(0)
+  movie_availability movie_availability[]
+  users              users?               @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "movies_ibfk_1")
+  reviews            reviews[]
+  watchlist          watchlist[]
+
+  @@index([created_by], map: "created_by")
+}
+
+model reviews {
+  id         Int       @id @default(autoincrement())
+  movie_id   Int
+  user_id    Int
+  rating     Float?    @db.Float
+  comment    String?   @db.Text
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+  updated_at DateTime? @default(now()) @db.Timestamp(0)
+  movies     movies    @relation(fields: [movie_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "reviews_ibfk_1")
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "reviews_ibfk_2")
+
+  @@index([movie_id], map: "movie_id")
+  @@index([user_id], map: "user_id")
+}
+
+model watchlist {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  movie_id   Int
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+  status     watch_status  @default(TO_WATCH)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "watchlist_ibfk_1")
+  movies     movies    @relation(fields: [movie_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "watchlist_ibfk_2")
+
+  @@unique([user_id, movie_id], map: "user_id_movie_id_unique")
+  @@index([movie_id], map: "movie_id")
+  @@index([user_id], map: "user_id")
+}
+
+model platforms {
+  id                 Int                  @id @default(autoincrement())
+  name               String               @db.VarChar(100)
+  type               String?              @db.VarChar(50)
+  website            String?              @db.Text
+  created_at         DateTime?            @default(now()) @db.Timestamp(0)
+  movie_availability movie_availability[]
+}
+
+model regions {
+  id                 Int                  @id @default(autoincrement())
+  name               String?              @unique(map: "name") @db.VarChar(100)
+  code               String?              @unique(map: "code") @db.VarChar(10)
+  created_at         DateTime?            @default(now()) @db.Timestamp(0)
+  movie_availability movie_availability[]
+}
+
+model movie_availability {
+  id                Int       @id @default(autoincrement())
+  movie_id          Int
+  platform_id       Int
+  region_id         Int
+  availability_type String?   @db.VarChar(50)
+  start_date        DateTime? @db.Date
+  end_date          DateTime? @db.Date
+  url               String?   @db.Text
+  created_at        DateTime? @default(now()) @db.Timestamp(0)
+  updated_at        DateTime? @default(now()) @db.Timestamp(0)
+  movies            movies    @relation(fields: [movie_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "movie_availability_ibfk_1")
+  platforms         platforms @relation(fields: [platform_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "movie_availability_ibfk_2")
+  regions           regions   @relation(fields: [region_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "movie_availability_ibfk_3")
+
+  @@index([movie_id], map: "movie_id")
+  @@index([platform_id], map: "platform_id")
+  @@index([region_id], map: "region_id")
+}
+
+enum userlogins_status {
+  active
+  suspended
+}
+
+enum users_role {
+  admin
+  user
+}
+
+enum users_status {
+  active
+  suspended
+}
+
+enum watch_status {
+  TO_WATCH
+  WATCHING
+  WATCHED
+}
